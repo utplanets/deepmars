@@ -1,0 +1,1 @@
+python deepmars/models/predict_model.py  make_prediction 2.6 1.8 --index $1 --prefix=sys

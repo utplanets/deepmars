@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+lon=$1
+lat=$2
+    ulon=$(($lon+30))
+    ulat=$(($lat+30))
+    llon=`printf %03i $lon`
+    llat=`printf %02i $lat`
+    filename=data/external/THEMIS_day/thm_dir_N${llat}_${llon}.png
+    prefix=thm_${llat}_${llon}
+    
+    if [ $lon -gt 179 ] 
+    then
+	lon=$((lon-360))
+    fi
+
+    if [ $ulon -gt 179 ]
+    then
+       ulon=$((ulon-360))
+    fi
+
+    echo "$lon $ulon $lat $ulat $fname"
+    python deepmars/data/make_dataset.py make_dataset --prefix=$prefix --systematic --filename=${filename} --source_cdim $lon $ulon $lat $ulat --sub_cdim $lon $ulon $lat $ulat --amt=1939 --rawlen_range 256 4096
+    python deepmars/models/predict_model.py  make_prediction 2.6 1.8 --index 0 --prefix=$prefix

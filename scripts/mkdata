@@ -1,0 +1,1 @@
+python deepmars/data/make_dataset.py make_dataset  --istart $1 --amt=1000 --prefix=sys --systematic

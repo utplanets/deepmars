@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+for lon in `seq 0 30 330`
+  do
+  for lat in `seq -90 30 60`
+    do
+      ./mkthemis $lon $lat
+    done
+  done
