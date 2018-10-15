@@ -15,7 +15,7 @@ def preprocess(Data, dim=256, low=0.1, hi=1.0):
         Maximum rescale value.
     """
     for key in Data:
-        if len(Data[key][0])==0:
+        if len(Data[key][0]) == 0:
             continue
         Data[key][0] = Data[key][0].reshape(len(Data[key][0]), dim, dim, 1)
         for i, img in enumerate(Data[key][0]):

@@ -23,7 +23,7 @@ def load_model(model=None):
     utils.load_env()
     if model is None:
         model = utils.getenv("DM_KERAS_MODEL")
-    if isinstance(model,str):
+    if isinstance(model, str):
         model = km.load_model(model)
     return model
 
@@ -97,13 +97,13 @@ def add_unique_craters(craters, craters_unique, thresh_longlat2, thresh_rad):
         lo, la, r = craters[j].T
         la_m = (la + Lat) / 2.
         minr = np.minimum(r, Rad)       # be liberal when filtering dupes
-        
+
         # duplicate filtering criteria
         dL = (((Long - lo) / (minr * k2d / np.cos(np.pi * la_m / 180.)))**2
               + ((Lat - la) / (minr * k2d))**2)
         dR = np.abs(Rad - r) / minr
         index = (dR < thresh_rad) & (dL < thresh_longlat2)
-        
+
         if len(np.where(index == True)[0]) == 0:
             craters_unique = np.vstack((craters_unique, craters[j]))
     return craters_unique
@@ -163,19 +163,19 @@ def estimate_longlatdiamkm(dim, llbd, distcoeff, coords):
     # Return combined long/lat/radius array.
     return np.column_stack((long_deg, lat_deg, radii_km))
 
-def match_template(pred, craters,i, index, dim, withmatches=False):
-    img = proc.get_id(i+index)
-    found=False
-    valid=False
+def match_template(pred, craters, i, index, dim, withmatches=False):
+    img = proc.get_id(i + index)
+    found = False
+    valid = False
     diam = 'Diameter (pix)'
     if withmatches:
-        N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes = -1,-1,-1,-1,-1,-1,-1,-1
+        N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes = -1, -1, -1, -1, -1, -1, -1, -1
 
         if img in craters:
             csv = craters[img]
-            found=True
+            found = True
         if found:
-            minrad, maxrad = 3,50
+            minrad, maxrad = 3, 50
             cutrad = 0.8
             csv = csv[(csv[diam] < 2 * maxrad) & (csv[diam] > 2 * minrad)]
             csv = csv[(csv['x'] + cutrad * csv[diam] / 2 <= dim[0])]
@@ -188,15 +188,15 @@ def match_template(pred, craters,i, index, dim, withmatches=False):
 
 
     if valid:
-        coords, N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes = tmt.template_match_t2c(pred,csv)
-        df2 = pd.DataFrame(np.array([N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes])[None,:],
-                           columns=["N_match", "N_csv", "N_detect", "maxr", "err_lo", "err_la", "err_r", "frac_dupes"],index=[img])
+        coords, N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes = tmt.template_match_t2c(pred, csv)
+        df2 = pd.DataFrame(np.array([N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes])[None, :],
+                           columns=["N_match", "N_csv", "N_detect", "maxr", "err_lo", "err_la", "err_r", "frac_dupes"], index=[img])
     else:
         coords = tmt.template_match_t(pred)
-        df2=None
-    return [coords,df2]
+        df2 = None
+    return [coords, df2]
 
-def extract_unique_craters(CP, craters_unique,index=0, start=0,stop=-1, withmatches=False):
+def extract_unique_craters(CP, craters_unique, index=0, start=0, stop=-1, withmatches=False):
     """Top level function that extracts craters from model predictions,
     converts craters from pixel to real (degree, km) coordinates, and filters
     out duplicate detections across images.
@@ -238,31 +238,31 @@ def extract_unique_craters(CP, craters_unique,index=0, start=0,stop=-1, withmatc
     if stop < 0:
         stop = P['input_images'].shape[0]
 
-    start = np.clip(start,0,P['input_images'].shape[0]-1)
-    stop =  np.clip(stop,1,P['input_images'].shape[0])
-    craters_h5 = pd.HDFStore(CP['dir_craters'],'w')
+    start = np.clip(start, 0, P['input_images'].shape[0] - 1)
+    stop = np.clip(stop, 1, P['input_images'].shape[0])
+    craters_h5 = pd.HDFStore(CP['dir_craters'], 'w')
 
 
-    csvs=[]
+    csvs = []
     if withmatches:
         craters = pd.HDFStore(CP['dir_input_craters'], 'r')
-        matches = []#pd.DataFrame(columns=["N_match", "N_csv", "N_detect", "maxr", "err_lo", "err_la", "err_r", "frac_dupes"])
+        matches = []  # pd.DataFrame(columns=["N_match", "N_csv", "N_detect", "maxr", "err_lo", "err_la", "err_r", "frac_dupes"])
 
     full_craters = dict()
     if withmatches:
-        for i in range(start,stop):
-            img = proc.get_id(i+index)
+        for i in range(start, stop):
+            img = proc.get_id(i + index)
             if img in craters:
-                full_craters[img]=craters[img]
+                full_craters[img] = craters[img]
 
-    
-    res = Parallel(n_jobs=int(utils.getenv("DM_NCPU")), verbose=5)(delayed(match_template)(preds[i],full_craters, i,index,dim,withmatches=withmatches) for i in range(start,stop))
 
-    for i in range(start,stop):
+    res = Parallel(n_jobs=int(utils.getenv("DM_NCPU")), verbose=5)(delayed(match_template)(preds[i], full_craters, i, index, dim, withmatches=withmatches) for i in range(start, stop))
+
+    for i in range(start, stop):
         coords, df2 = res[i]
         if withmatches:
             matches.append(df2)
-        img = proc.get_id(i+index)
+        img = proc.get_id(i + index)
         # convert, add to master dist
         if len(coords) > 0:
             new_craters_unique = estimate_longlatdiamkm(
@@ -277,23 +277,23 @@ def extract_unique_craters(CP, craters_unique,index=0, start=0,stop=-1, withmatc
             else:
                 craters_unique = np.concatenate((craters_unique,
                                                  new_craters_unique))
-            
-            data = np.hstack([new_craters_unique*np.array([1,1,2])[None,:],coords*np.array([1,1,2])[None,:]])
-            df = pd.DataFrame(data,columns=['Long','Lat','Diameter (km)','x','y','Diameter (pix)'])
-            craters_h5[img] = df[['Lat','Long','Diameter (km)','x','y','Diameter (pix)']]
+
+            data = np.hstack([new_craters_unique * np.array([1, 1, 2])[None, :], coords * np.array([1, 1, 2])[None, :]])
+            df = pd.DataFrame(data, columns=['Long', 'Lat', 'Diameter (km)', 'x', 'y', 'Diameter (pix)'])
+            craters_h5[img] = df[['Lat', 'Long', 'Diameter (km)', 'x', 'y', 'Diameter (pix)']]
             craters_h5.flush()
-            
-    logger.info("Saving to %s with %d unique craters" % (CP['dir_result'],len(craters_unique)))
+
+    logger.info("Saving to %s with %d unique craters" % (CP['dir_result'], len(craters_unique)))
     np.save(CP['dir_result'], craters_unique)
-    alldata = craters_unique*np.array([1,1,2])[None,:]
-    df = pd.DataFrame(alldata,columns=['Long','Lat','Diameter (km)'])
-    craters_h5["all"] = df[['Lat','Long','Diameter (km)']]
+    alldata = craters_unique * np.array([1, 1, 2])[None, :]
+    df = pd.DataFrame(alldata, columns=['Long', 'Lat', 'Diameter (km)'])
+    craters_h5["all"] = df[['Lat', 'Long', 'Diameter (km)']]
     if withmatches:
         craters_h5["matches"] = pd.concat(matches)
         craters.close()
     craters_h5.flush()
     craters_h5.close()
-    
+
     return craters_unique
 
 
@@ -306,10 +306,10 @@ def predict():
     pass
 
 @predict.command()
-@click.argument('index',type=int,nargs=-1)
-@click.option('--prefix',default="test")
-@click.option('--output_prefix',default=None)
-@click.option("--model",default=None)
+@click.argument('index', type=int, nargs=-1)
+@click.option('--prefix', default="test")
+@click.option('--output_prefix', default=None)
+@click.option("--model", default=None)
 def cnn_prediction(index, prefix, output_prefix, model):
     """ CNN predictions.
 
@@ -321,7 +321,7 @@ def cnn_prediction(index, prefix, output_prefix, model):
     start_time = time.time()
 
     if model is None:
-        model = os.path.join(utils.getenv("DM_ROOTDIR"),'data/models/model_keras2.h5')
+        model = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/models/model_keras2.h5')
         model = load_model(model)
 
     for ivalue in index:
@@ -333,26 +333,26 @@ def cnn_prediction(index, prefix, output_prefix, model):
         if output_prefix is None:
             output_prefix = prefix
         # Crater Parameters
-        CP = dict(dim=256,datatype=prefix,
+        CP = dict(dim=256, datatype=prefix,
                   n_imgs=-1,
-                  dir_model = model,
-                  dir_data = os.path.join(utils.getenv("DM_ROOTDIR"),'data/processed/%s_images%s.hdf5' % (prefix,indexstr)),
-                  dir_preds = os.path.join(utils.getenv("DM_ROOTDIR"),'data/predictions/%s_preds%s.hdf5' % (output_prefix, indexstr)))
+                  dir_model=model,
+                  dir_data=os.path.join(utils.getenv("DM_ROOTDIR"), 'data/processed/%s_images%s.hdf5' % (prefix, indexstr)),
+                  dir_preds=os.path.join(utils.getenv("DM_ROOTDIR"), 'data/predictions/%s_preds%s.hdf5' % (output_prefix, indexstr)))
 
         get_model_preds(CP)
 
     elapsed_time = time.time() - start_time
     logger.info("Time elapsed: {0:.1f} min".format(elapsed_time / 60.))
-    
+
 @predict.command()
-@click.argument('llt2',type=float)
-@click.argument('rt',type=float)
-@click.option('--index',type=int, default=None)
-@click.option('--prefix',default="test")
-@click.option('--start',default=-1)
-@click.option('--stop',default=-1)
-@click.option('--matches',is_flag=True,default=False)
-@click.option("--model",default=None)
+@click.argument('llt2', type=float)
+@click.argument('rt', type=float)
+@click.option('--index', type=int, default=None)
+@click.option('--prefix', default="test")
+@click.option('--start', default=-1)
+@click.option('--stop', default=-1)
+@click.option('--matches', is_flag=True, default=False)
+@click.option("--model", default=None)
 def make_prediction(llt2, rt, index, prefix, start, stop, matches, model):
     """ Make predictions.
 
@@ -374,14 +374,14 @@ def make_prediction(llt2, rt, index, prefix, start, stop, matches, model):
     # Data type - train, dev, test
     CP['datatype'] = prefix
     # Number of images to extract craters from
-    CP['n_imgs'] = -1 # all of them
+    CP['n_imgs'] = -1  # all of them
     # Hyperparameters
     CP['llt2'] = llt2    # D_{L,L} from Silburt et. al (2019)
     CP['rt'] = rt     # D_{R} from Silburt et. al (2019)
     # Location of model to generate predictions (if they don't exist yet)
     if model is None:
-        model = os.path.join(utils.getenv("DM_ROOTDIR"),'data/models/model_keras2.h5')
-    CP['dir_model'] =  model
+        model = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/models/model_keras2.h5')
+    CP['dir_model'] = model
 #    # Location of where hdf5 data images are stored
 #    CP['dir_data'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/processed/%s_images.hdf5' % CP['datatype'])
 #    # Location of where model predictions are/will be stored
@@ -390,19 +390,19 @@ def make_prediction(llt2, rt, index, prefix, start, stop, matches, model):
 #    CP['dir_result'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/processed/%s_craterdist.npy' % (CP['datatype']))
 #
     # Location of where hdf5 data images are stored
-    CP['dir_data'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/processed/%s_images%s.hdf5' % (CP['datatype'],indexstr))
+    CP['dir_data'] = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/processed/%s_images%s.hdf5' % (CP['datatype'], indexstr))
     # Location of where model predictions are/will be stored
-    CP['dir_preds'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/predictions/%s_preds%s.hdf5' % (CP['datatype'], indexstr))
+    CP['dir_preds'] = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/predictions/%s_preds%s.hdf5' % (CP['datatype'], indexstr))
     # Location of where final unique crater distribution will be stored
-    CP['dir_result'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/predictions/%s_craterdist%s.npy' % (CP['datatype'], indexstr))
+    CP['dir_result'] = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/predictions/%s_craterdist%s.npy' % (CP['datatype'], indexstr))
     # Location of hdf file containing craters found
-    CP['dir_craters'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/predictions/%s_craterdist%s.hdf5' % (CP['datatype'], indexstr))
+    CP['dir_craters'] = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/predictions/%s_craterdist%s.hdf5' % (CP['datatype'], indexstr))
     # Location of hdf file containing craters found
-    CP['dir_input_craters'] = os.path.join(utils.getenv("DM_ROOTDIR"),'data/processed/%s_craters%s.hdf5' % (CP['datatype'], indexstr))
-    
+    CP['dir_input_craters'] = os.path.join(utils.getenv("DM_ROOTDIR"), 'data/processed/%s_craters%s.hdf5' % (CP['datatype'], indexstr))
+
     craters_unique = np.empty([0, 3])
 
-    craters_unique = extract_unique_craters(CP, craters_unique,index=index, start=start, stop=stop, withmatches=matches)
+    craters_unique = extract_unique_craters(CP, craters_unique, index=index, start=start, stop=stop, withmatches=matches)
 
 
     elapsed_time = time.time() - start_time

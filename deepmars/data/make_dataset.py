@@ -20,6 +20,7 @@ import imageio
 import collections
 from deepmars.data.common import *
 
+
 @click.group()
 def data():
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -27,7 +28,6 @@ def data():
 
     # not used in this stub but often useful for finding various files
     project_dir = Path(__file__).resolve().parents[2]
-
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables
@@ -41,7 +41,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
                rawlen_dist='log', ilen=256, cdim=[-180., 180., -90., 90.],
                arad=3389., minpix=0, tglen=256, binary=True, rings=True,
                ringwidth=1, truncate=True, amt=100, istart=0, seed=None,
-               verbose=False,sample=False, systematic=False):
+               verbose=False, sample=False, systematic=False):
     """Generates random dataset from a global DEM and crater catalogue.
 
     The function randomly samples small images from a global digital elevation
@@ -99,7 +99,6 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
         If True, prints out number of image being generated.
     """
 
-
     logger = logging.getLogger(__name__)
     logger.info('making data set')
     # just in case we ever make this user-selectable...
@@ -108,9 +107,9 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     # Seed random number generator.
     if seed is None:
         seed = os.getenv("DM_SEED")
-    
+
     if seed is not None:
-        seed=int(seed)
+        seed = int(seed)
         logger.info("Seed: %d" % seed)
 
     np.random.seed(seed)
@@ -119,7 +118,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     if not sample:
         AddPlateCarree_XY(craters, img.shape, cdim=cdim, origin=origin)
 
-    iglobe = ccrs.Globe(semimajor_axis=arad*1000., semiminor_axis=arad*1000.,
+    iglobe = ccrs.Globe(semimajor_axis=arad * 1000., semiminor_axis=arad * 1000.,
                         ellipse=None)
 
     # Create random sampler (either uniform or loguniform).
@@ -137,10 +136,12 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     # Initialize output hdf5s.
     imgs_h5 = h5py.File(outhead + '_images_{:05d}.hdf5'.format(istart), 'w')
     imgs_h5_inputs = imgs_h5.create_dataset("input_images", (amt, ilen, ilen),
-                                            dtype='uint8', compression="gzip", compression_opts=9)
+                                            dtype='uint8', compression="gzip",
+                                            compression_opts=9)
     imgs_h5_inputs.attrs['definition'] = "Input image dataset."
     imgs_h5_tgts = imgs_h5.create_dataset("target_masks", (amt, tglen, tglen),
-                                          dtype='float32', compression="gzip", compression_opts=9)
+                                          dtype='float32', compression="gzip",
+                                          compression_opts=9)
     imgs_h5_tgts.attrs['definition'] = "Target mask dataset."
     imgs_h5_llbd = imgs_h5.create_group("longlat_bounds")
     imgs_h5_llbd.attrs['definition'] = ("(long min, long max, lat min, "
@@ -154,109 +155,110 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     imgs_h5_cll = imgs_h5.create_group("cll_xy")
     imgs_h5_cll.attrs['definition'] = ("(x, y) pixel coordinates of the "
                                        "central long / lat.")
-    craters_h5 = pd.HDFStore(outhead + '_craters_{:05d}.hdf5'.format(istart), 'w')
+    craters_h5 = pd.HDFStore(outhead + '_craters_{:05d}.hdf5'.format(istart),
+                             'w')
 
 
-    # Zero-padding for hdf5 keys.
-    zeropad = 5#int(np.log10(amt)) + 1
-    def lower(x,y):
+# Zero-padding for hdf5 keys.
+    zeropad = 5  # int(np.log10(amt)) + 1
+
+    def lower(x, y):
         if x is None:
             return y
         else:
             return x if x < y else y
-        
-    def upper(x,y):
+
+    def upper(x, y):
         if x is None:
             return y
         else:
             return x if x > y else y
-    
-    def check4(x,y,mapping=None):
+
+    def check4(x, y, mapping=None):
         if mapping is None:
-            mapping=[lower,upper,lower,upper]
-        return [func(a,b) for func,a,b in zip(mapping,x,y)]
+            mapping = [lower, upper, lower, upper]
+        return [func(a, b) for func, a, b in zip(mapping, x, y)]
 
-    latlim=[None,None,None,None]
-    pixlim=[None,None,None,None]
+    latlim = [None, None, None, None]
+    pixlim = [None, None, None, None]
 
-    def randomized(amt,istart):
+    def randomized(amt, istart):
         for i in range(amt):
             # Determine image size to crop.
             rawlen = random_sampler()
             logger.debug("rawlen %d" % rawlen)
             if rawlen > img.shape[1]:
                 rawlen = img.shape[1]
-                yc=0
+                yc = 0
                 xc = np.random.randint(0, img.shape[0] - rawlen)
                 logger.debug("using all of the Y domain")
             else:
                 xc = np.random.randint(0, img.shape[0] - rawlen)
                 yc = np.random.randint(0, img.shape[1] - rawlen)
-            yield (i,xc,yc,rawlen)
+            yield (i, xc, yc, rawlen)
 
-#def uniform_yield(start,amt,dims,res_low,res_high,overlap=0.2):
-    def stepping(amt,istart):
-        overlap=0.25
+    def stepping(amt, istart):
+        overlap = 0.25
         import itertools
 
         def yy(res, edge):
-            step = int(res*edge)
-            for ix,iy in itertools.product(np.arange(0,img.shape[0],step),
-                                           np.arange(0,img.shape[1],step)):
-                if ix+res > img.shape[0]:
-                    ix=img.shape[0]-res
-                if iy+res > img.shape[1]:
-                    iy=img.shape[1]-res
-                yield (ix,iy)
+            step = int(res * edge)
+            for ix, iy in itertools.product(np.arange(0, img.shape[0], step),
+                                            np.arange(0, img.shape[1], step)):
+                if ix + res > img.shape[0]:
+                    ix = img.shape[0] - res
+                if iy + res > img.shape[1]:
+                    iy = img.shape[1] - res
+                yield (ix, iy)
         res = rawlen_range[0]
-        flag=True
+        flag = True
         edge = 1 - overlap
-        counter=0
-        i=0
-        mystart=0
-        total_counter=0
+        counter = 0
+        i = 0
+        mystart = 0
+        total_counter = 0
         while flag:
-            for counter,vals in enumerate(yy(res,edge)):
-                total_counter+=1
-                if total_counter > istart and total_counter <= istart+amt:
+            for counter, vals in enumerate(yy(res, edge)):
+                total_counter += 1
+                if total_counter > istart and total_counter <= istart + amt:
                     logger.debug("rawlen %d" % res)
-                    yield (i,vals[0],vals[1],res)
-                    i=i+1
+                    yield (i, vals[0], vals[1], res)
+                    i = i + 1
                 else:
-                    pass #throw away
-                if total_counter >= istart+amt:
+                    pass  # throw away
+                if total_counter >= istart + amt:
                     return
-            if res>rawlen_range[1]:
-                flag=False
+            if res > rawlen_range[1]:
+                flag = False
             else:
-                res=res*2
+                res = res * 2
 
     if systematic:
         iterator = stepping
     else:
         iterator = randomized
 
-    for i,xc,yc,rawlen in iterator(amt,istart):
-        #print("==== ",i,xc,yc,rawlen)
+    for i, xc, yc, rawlen in iterator(amt, istart):
+        # print("==== ",i,xc,yc,rawlen)
         # Current image number.
         img_number = "img_{i:0{zp}d}".format(i=istart + i, zp=zeropad)
         if verbose:
             logger.info("Generating {0}".format(img_number))
 
-
         box = np.array([xc, yc, xc + rawlen, yc + rawlen], dtype='int32')
-        logger.debug("{} {}".format(xc,yc))
+        logger.debug("{} {}".format(xc, yc))
         logger.debug("{}".format(img.shape))
-        pixlim = check4(pixlim,box,[lower,lower,upper,upper])
-        
+        pixlim = check4(pixlim, box, [lower, lower, upper, upper])
+
         # Load necessary because crop may be a lazy operation; im.load() should
         # copy it.  See <http://pillow.readthedocs.io/en/3.1.x/
         # reference/Image.html>.
-        #im = img.crop(box)
-        #im.load()
-        #print(box, img.shape)
-        im = img[box[0]:box[2],box[1]:box[3]]
-        im = img_as_uint(exposure.rescale_intensity(im.astype(np.int32),out_range=(0,2**16-1)))
+        # im = img.crop(box)
+        # im.load()
+        # print(box, img.shape)
+        im = img[box[0]:box[2], box[1]:box[3]]
+        im = img_as_uint(exposure.rescale_intensity(im.astype(np.int32),
+                         out_range=(0, 2 ** 16 - 1)))
         # Obtain long/lat bounds for coordinate transform.
         ix = box[::2]
         iy = box[1::2]
@@ -265,21 +267,22 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
                                     origin=origin)
         llbd = np.r_[llong, llat[::-1]]
 
-
         logger.info("Limits: {} {} {} {}".format(*llbd))
         if sample:
-            #save the limits here.
-            sds_box = imgs_h5_box.create_dataset(img_number, (4,), dtype='int32')
+            # save the limits here.
+            sds_box = imgs_h5_box.create_dataset(img_number, (4,),
+                                                 dtype='int32')
             sds_box[...] = box
-            sds_llbd = imgs_h5_llbd.create_dataset(img_number, (4,), dtype='float')
+            sds_llbd = imgs_h5_llbd.create_dataset(img_number, (4,),
+                                                   dtype='float')
             sds_llbd[...] = llbd
             continue
         # Downsample image.
-        
-        print(im.min(),im.max(), im.dtype)
-        im = resize(im,(ilen, ilen))
-        im = img_as_ubyte(im)#-im.min()
-        im = Image.fromarray(im.T,'L')#Image.open(img).convert("L")        
+
+        print(im.min(), im.max(), im.dtype)
+        im = resize(im, (ilen, ilen))
+        im = img_as_ubyte(im)  # -im.min()
+        im = Image.fromarray(im.T, 'L')  # Image.open(img).convert("L")
 
 #        print(im[im.shape[0]//2])
 #        print(im.dtype)
@@ -309,7 +312,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
         # Image.NEAREST creates artifacts.  Try Image.LANZCOS if BILINEAR still
         # leaves artifacts).
 #        tgt = resize(imgo_arr,(tglen, tglen))
-        tgt = np.asanyarray(imgo_arr.resize((tglen,tglen),resample=Image.BILINEAR))
+        tgt = np.asanyarray(imgo_arr.resize((tglen, tglen), resample=Image.BILINEAR))
 
         import deepmars.data.mask as dm
         mask = dm.make_mask(ctr_xy, tgt, binary=binary, rings=rings,
@@ -318,7 +321,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
         # Output everything to file.
         imgs_h5_inputs[i, ...] = imgo_arr
         imgs_h5_tgts[i, ...] = mask
-        #save the limits here.
+        # save the limits here.
         sds_box = imgs_h5_box.create_dataset(img_number, (4,), dtype='int32')
         sds_box[...] = box
         sds_llbd = imgs_h5_llbd.create_dataset(img_number, (4,), dtype='float')
@@ -332,24 +335,24 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
 
         imgs_h5.flush()
         craters_h5.flush()
-    
+
     imgs_h5.close()
     craters_h5.close()
 
 
 @data.command()
-#@click.argument('input_filepath', type=click.Path(exists=True))
-#@click.argument('output_filepath', type=click.Path())
-@click.option("--filename",default=None,type=str)
-@click.option("--istart",default=0)
-@click.option("--amt",default=3000)
-@click.option("--sample",is_flag=True,default=False)
-@click.option("--systematic",is_flag=True,default=False)
-@click.option("--prefix",default="test")
-@click.option("--source_cdim", default= (-180., 180., -90., 90.), nargs=4,type=float)
-@click.option("--sub_cdim", default= (-180., 180., -90., 90.), nargs=4,type=float)
-@click.option("--rawlen_range", default=(256,8192), nargs=2,type=int)
-def make_dataset(filename, istart, amt,sample,systematic,prefix, source_cdim, sub_cdim, rawlen_range):#input_filepath, output_filepath):
+# @click.argument('input_filepath', type=click.Path(exists=True))
+# @click.argument('output_filepath', type=click.Path())
+@click.option("--filename", default=None, type=str)
+@click.option("--istart", default=0)
+@click.option("--amt", default=3000)
+@click.option("--sample", is_flag=True, default=False)
+@click.option("--systematic", is_flag=True, default=False)
+@click.option("--prefix", default="test")
+@click.option("--source_cdim", default=(-180., 180., -90., 90.), nargs=4, type=float)
+@click.option("--sub_cdim", default=(-180., 180., -90., 90.), nargs=4, type=float)
+@click.option("--rawlen_range", default=(256, 8192), nargs=2, type=int)
+def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim, sub_cdim, rawlen_range):  # input_filepath, output_filepath):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
@@ -359,98 +362,99 @@ def make_dataset(filename, istart, amt,sample,systematic,prefix, source_cdim, su
 
     # Use MPI4py?  Set this to False if it's not supposed by the system.
     use_mpi4py = False
-    
+
         # Output filepath and file header.  Eg. if outhead = "./input_data/train",
     # files will have extension "./out/train_inputs.hdf5" and
     # "./out/train_targets.hdf5"
-    outhead = os.path.join(os.getenv("DM_ROOTDIR"),"data/processed/{}".format(prefix))
-    
+    outhead = os.path.join(os.getenv("DM_ROOTDIR"), "data/processed/{}".format(prefix))
+
     # Number of images to make (if using MPI4py, number of image per thread to
     # make).
 #    amt = 3000
 
-    
+
     # Range of image widths, in pixels, to crop from source image (input images
     # will be scaled down to ilen). For Orthogonal projection, larger images are
     # distorted at their edges, so there is some trade-off between ensuring images
     # have minimal distortion, and including the largest craters in the image.
-    
+
     # Distribution to sample from rawlen_range - "uniform" for uniform, and "log"
     # for loguniform.
     rawlen_dist = 'log'
-    
+
     # Size of input images.
     ilen = 256
-    
+
     # Size of target images.
     tglen = 256
-    
+
     # [Min long, max long, min lat, max lat] dimensions of source image.
 #    if source_cdim is None:
 #        source_cdim =
-    
+
     # [Min long, max long, min lat, max lat] dimensions of the region of the source
     # to use when randomly cropping.  Used to distinguish training from test sets.
 #    if sub_cdim is None:
 #        sub_cdim = [-180., 180., -90., 90.]
-    
+
     # Minimum pixel diameter of craters to include in in the target.
     minpix = 3.
-    
+
     # Radius of the world in km (1737.4 for Moon).
     R_km = 3389.0
-    
+
     ### Target mask arguments. ###
-    
+
     # If True, truncate mask where image has padding.
     truncate = True
-    
+
     # If rings = True, thickness of ring in pixels.
     ringwidth = 1
-    
+
     # If True, script prints out the image it's currently working on.
     verbose = True
 
     if sample:
-        craters=None
+        craters = None
         logger.info("no craters loaded")
     else:
         craters = ReadRobbinsCraters()
         logger.info("found {} craters in the database".format(len(craters)))
 #
     img = MarsDEM(filename).T
-    logger.info("Mars DEM resolution {} by {}".format(img.shape[0],img.shape[1]))
+    logger.info("Mars DEM resolution {} by {}".format(img.shape[0],
+                                                      img.shape[1]))
 
     if use_mpi4py:
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
-        #print("Thread {0} of {1}".format(rank, size))
+        #  print("Thread {0} of {1}".format(rank, size))
         istart = rank * amt
         sub_cdim = [-180., 180., -90., 90.]
         if rank < 2:
-            msize=1
+            msize = 1
             orank = rank
         else:
             msize = 2**(np.floor(np.log2(rank))).astype(int)
             orank = 2**(np.floor(np.log2(rank))).astype(int)
         rk = rank
         rank = rank - orank
-        result = [i for i in range(1,1+msize//1) if size%i==0]
-        xv = result[len(result)//2]
-        yv = msize//xv
-        dx = (source_cdim[1]-source_cdim[0])/xv
-        dy = (source_cdim[3]-source_cdim[2])/yv
-        #print(xv,yv,dx,dy)
-        overlap=0.1
-        sub_cdim = np.array([-180+dx*(rank%xv)-overlap*dx,
-                             -180+dx*(1+rank%xv)+overlap*dy,
-                             -90+dy*(rank//xv)-overlap*dx,
-                             -90+dy*(1+rank//xv)+overlap*dy]).astype(int)
-        sub_cdim = list(np.hstack([np.clip(sub_cdim[:2],-180,180),np.clip(sub_cdim[2:],-90,90)]).astype(int))
+        result = [i for i in range(1, 1 + msize // 1) if size % i == 0]
+        xv = result[len(result) // 2]
+        yv = msize // xv
+        dx = (source_cdim[1] - source_cdim[0]) / xv
+        dy = (source_cdim[3] - source_cdim[2]) / yv
+        # print(xv,yv,dx,dy)
+        overlap = 0.1
+        sub_cdim = np.array([-180 + dx * (rank % xv) - overlap * dx,
+                             -180 + dx * (1 + rank % xv) + overlap * dy,
+                             -90 + dy * (rank // xv) - overlap * dx,
+                             -90 + dy * (1 + rank // xv) + overlap * dy]).astype(int)
+        sub_cdim = list(np.hstack([np.clip(sub_cdim[:2], -180, 180), np.clip(sub_cdim[2:], -90, 90)]).astype(int))
 
-        print(",".join([str(x) for x in np.hstack([xv,yv,rk,sub_cdim])]))
+        print(",".join([str(x) for x in np.hstack([xv, yv, rk, sub_cdim])]))
     else:
         pass
 
@@ -458,8 +462,8 @@ def make_dataset(filename, istart, amt,sample,systematic,prefix, source_cdim, su
     # craters beyond cdim (either sub or source).
     if sub_cdim != source_cdim:
         img = InitialImageCut(img, source_cdim, sub_cdim)
-        logger.info("Subsampled DEM resolution {} by {}".format(img.shape[0],img.shape[1]))
-        logger.info("Covering Long {} to {}, lat {} to {}".format(sub_cdim[0],sub_cdim[1],sub_cdim[2],sub_cdim[3]))
+        logger.info("Subsampled DEM resolution {} by {}".format(img.shape[0], img.shape[1]))
+        logger.info("Covering Long {} to {}, lat {} to {}".format(sub_cdim[0], sub_cdim[1], sub_cdim[2], sub_cdim[3]))
 
     # This always works, since sub_cdim < source_cdim.
     if not sample:
@@ -468,7 +472,7 @@ def make_dataset(filename, istart, amt,sample,systematic,prefix, source_cdim, su
                     rawlen_dist=rawlen_dist, ilen=ilen, cdim=sub_cdim,
                     arad=R_km, minpix=minpix, tglen=tglen, binary=True,
                     rings=True, ringwidth=ringwidth, truncate=truncate,
-                    amt=amt, istart=istart, verbose=verbose,sample=sample,systematic=systematic)
+                    amt=amt, istart=istart, verbose=verbose, sample=sample, systematic=systematic)
 
     elapsed_time = time.time() - start_time
     logger.info("Time elapsed: {0:.1f} min".format(elapsed_time / 60.))

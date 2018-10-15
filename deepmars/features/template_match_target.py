@@ -62,7 +62,7 @@ def template_match_t(target, minrad=minrad_, maxrad=maxrad_,
     coords : array
         Pixel coordinates of successfully detected craters in predicted target.
     """
-    
+
     # thickness of rings for template match
     rw = 2
 
@@ -99,7 +99,7 @@ def template_match_t(target, minrad=minrad_, maxrad=maxrad_,
         Long, Lat, Rad = coords.T
         lo, la, r = coords[i]
         minr = np.minimum(r, Rad)
-        
+
         dL = ((Long - lo)**2 + (Lat - la)**2) / minr**2
         dR = abs(Rad - r) / minr
         index = (dR < rad_thresh) & (dL < longlat_thresh2)
@@ -172,7 +172,7 @@ def template_match_t2c(target, csv_coords, minrad=minrad_, maxrad=maxrad_,
     # get coordinates from template matching
     templ_coords = template_match_t(target, minrad, maxrad, longlat_thresh2,
                                     rad_thresh, template_thresh, target_thresh)
-    
+
     return template_match_c(templ_coords, target, csv_coords, minrad=minrad, maxrad=maxrad,
                        longlat_thresh2=longlat_thresh2,
                        rad_thresh=rad_thresh, template_thresh=template_thresh,
@@ -195,7 +195,7 @@ def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=ma
     for lo, la, r in templ_coords:
         Long, Lat, Rad = csv_coords.T
         minr = np.minimum(r, Rad)
-        
+
         dL = ((Long - lo)**2 + (Lat - la)**2) / minr**2
         dR = abs(Rad - r) / minr
         index = (dR < rad_thresh) & (dL < longlat_thresh2)
@@ -207,8 +207,8 @@ def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=ma
             err_lo += abs(Lo - lo) / meanr
             err_la += abs(La - la) / meanr
             err_r += abs(R - r) / meanr
-            if N > 1: # duplicate entries hurt recall
-                frac_dupes += (N-1) / float(len(templ_coords))
+            if N > 1:  # duplicate entries hurt recall
+                frac_dupes += (N - 1) / float(len(templ_coords))
         N_match += min(1, N)
         # remove csv(s) so it can't be re-matched again
         csv_coords = csv_coords[np.where(index == False)]

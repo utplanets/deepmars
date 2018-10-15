@@ -12,6 +12,7 @@ import deepmars.utils.transform as trf
 import tifffile
 import os
 
+
 def MarsDEM(filename=None):
     """Reads the Mars DEM from a large tiff file.
 
@@ -28,13 +29,14 @@ def MarsDEM(filename=None):
 
     if filename is None:
         filename = os.getenv("DM_MarsDEM")
-    name,ext = os.path.splitext(filename)
-    if ext==".tif":
+    name, ext = os.path.splitext(filename)
+    if ext == ".tif":
         dem = tifffile.imread(filename)
-    elif ext==".png":
+    elif ext == ".png":
         dem = imageio.imread(filename)
-    print(dem.shape,filename)
+    print(dem.shape, filename)
     return dem
+
 
 def ReadRobbinsCraters(filename=None):
     """Reads the crater database TSV
@@ -42,8 +44,9 @@ def ReadRobbinsCraters(filename=None):
     Parameters
     -----------
     filename : str, optional
-        path of the TSV file, defaults to the value found in the environment variable DM_CraterTable
-    
+        path of the TSV file, defaults to the value found in the environment
+        variable DM_CraterTable
+
     Returns
     --------
     craters : pandas.Dataframe
@@ -54,30 +57,16 @@ def ReadRobbinsCraters(filename=None):
         filename = os.getenv("DM_CraterTable")
         print(filename)
 #    craters = pd.read_table(filename,sep='\t',engine='python',index_col=False)
-    craters = pd.read_csv(filename,index_col=False)
+    craters = pd.read_csv(filename, index_col=False)
     keep_columns = ["LATITUDE_CIRCLE_IMAGE",
                     "LONGITUDE_CIRCLE_IMAGE",
-                    "DIAM_CIRCLE_IMAGE",
-    #                "DIAM_CIRCLE_SD_IMAGE",
-    #                "DEPTH_RIM_TOPOG",
-    #                "DEPTH_RIM_SD_TOPOG",
-    #                "DEPTH_SURFACE_TOPOG",
-    #                "DEPTH_SURFACE_SD_TOPOG",
-    #                "DEPTH_FLOOR_TOPOG",
-    #                "DEPTH_FLOOR_SD_TOPOG",
-                    ]
+                    "DIAM_CIRCLE_IMAGE"]
 
     craters = craters[keep_columns]
-    craters.columns = ["Lat","Long","Diameter (km)",
-#                       "SD Diameter (km)",
-#                       "DEPTH_RIM_TOPOG",
-#                       "DEPTH_RIM_SD_TOPOG",
-#                       "DEPTH_SURFACE_TOPOG",
-#                       "DEPTH_SURFACE_SD_TOPOG",
-#                       "DEPTH_FLOOR_TOPOG",
-#                       "DEPTH_FLOOR_SD_TOPOG",
+    craters.columns = ["Lat", "Long", "Diameter (km)",
                        ]
     return craters
+
 
 def regrid_shape_aspect(regrid_shape, target_extent):
     """Helper function copied from cartopy.img_transform for resizing an image
@@ -365,8 +354,8 @@ def PlateCarree_to_Orthographic(img, llbd, craters, iglobe=None,
 
     # If user doesn't provide Moon globe properties.
     if not iglobe:
-        iglobe = ccrs.Globe(semimajor_axis=arad*1000.,
-                            semiminor_axis=arad*1000., ellipse=None)
+        iglobe = ccrs.Globe(semimajor_axis=arad * 1000.,
+                            semiminor_axis=arad * 1000., ellipse=None)
 
     # Set up Geodetic (long/lat), Plate Carree (usually long/lat, but not when
     # globe != WGS84) and Orthographic projections.
@@ -448,7 +437,9 @@ def PlateCarree_to_Orthographic(img, llbd, craters, iglobe=None,
 
     return [imgo, ctr_xy, distortion_coefficient, centrallonglat_xy]
 
-############# Create target dataset (and helper functions) #############
+
+#  Create target dataset (and helper functions)
+
 
 def circlemaker(r=10.):
     """
@@ -588,9 +579,8 @@ def make_mask(craters, img, binary=True, rings=False, ringwidth=1,
 
     return mask
 
-############# Create dataset (and helper functions) #############
 
-def AddPlateCarree_XY(craters, imgdim, cdim=[-180., 180., -90., 90.], 
+def AddPlateCarree_XY(craters, imgdim, cdim=[-180., 180., -90., 90.],
                       origin="upper"):
     """Adds x and y pixel locations to craters dataframe.
 

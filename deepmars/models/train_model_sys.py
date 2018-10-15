@@ -122,13 +122,13 @@ def custom_image_generator(data, target, batch_size=32):
     Manipulated images and targets.
         
     """
-    D, L, W = data.shape[0],data[0].shape[0], data[0].shape[1]
+    D, L, W = data.shape[0], data[0].shape[0], data[0].shape[1]
     while True:
         shuffle_index = np.arange(D)
-        np.random.shuffle(shuffle_index) #only shuffle once each loop through the data
+        np.random.shuffle(shuffle_index)  # only shuffle once each loop through the data
         for i in np.arange(0, len(data), batch_size):
 #            print("a",i,batch_size, len(data))
-            index = shuffle_index[i:i+batch_size]
+            index = shuffle_index[i:i + batch_size]
             d, t = data[index].copy(), target[index].copy()
 
             # Random color inversion
@@ -152,20 +152,20 @@ def custom_image_generator(data, target, batch_size=32):
                 d[j] = np.pad(d[j], ((npix, npix), (npix, npix), (0, 0)),
                               mode='constant')[npix + h[j]:L + h[j] + npix,
                                                npix + v[j]:W + v[j] + npix, :]
-                t[j] = np.pad(t[j], (npix,), mode='constant')[npix + h[j]:L + h[j] + npix, 
+                t[j] = np.pad(t[j], (npix,), mode='constant')[npix + h[j]:L + h[j] + npix,
                                                               npix + v[j]:W + v[j] + npix]
                 d[j], t[j] = np.rot90(d[j], r[j]), np.rot90(t[j], r[j])
             yield (d, t)
 
-def t2c(pred, csv,i,
+def t2c(pred, csv, i,
         minrad=minrad_, maxrad=maxrad_, longlat_thresh2=longlat_thresh2_,
-        rad_thresh=rad_thresh_, template_thresh=template_thresh_, target_thresh=target_thresh_) :
+        rad_thresh=rad_thresh_, template_thresh=template_thresh_, target_thresh=target_thresh_):
 #    print(minrad, maxrad, longlat_thresh2, rad_thresh, template_thresh, target_thresh)
-    return np.hstack([i,tmt.template_match_t2c(pred, csv, 
+    return np.hstack([i, tmt.template_match_t2c(pred, csv,
                                                minrad=minrad, maxrad=maxrad, longlat_thresh2=longlat_thresh2,
                                                rad_thresh=rad_thresh, template_thresh=template_thresh, target_thresh=target_thresh)])
 
-def diagnostic(res,beta):
+def diagnostic(res, beta):
     """Calculate the metrics from the predictions compared to the CSV.
     
     Parameters
@@ -182,22 +182,22 @@ def diagnostic(res,beta):
     dictionary : metrics stored in a dictionary
     """
 
-    counter,N_match, N_csv, N_detect, mrad, err_lo, err_la, err_r, frac_duplicates = np.array(res).T
-       
-    w=np.where(N_match==0)
+    counter, N_match, N_csv, N_detect, mrad, err_lo, err_la, err_r, frac_duplicates = np.array(res).T
 
-    w=np.where(N_match>0)
-    counter,N_match, N_csv, N_detect, mrad, err_lo, err_la, errr_, frac_dupes =\
-        counter[w],N_match[w], N_csv[w], N_detect[w], mrad[w], err_lo[w], err_la[w], err_r[w], frac_duplicates[w]
-    
-    precision = N_match/(N_match + (N_detect - N_match))
-    recall = N_match/N_csv
+    w = np.where(N_match == 0)
+
+    w = np.where(N_match > 0)
+    counter, N_match, N_csv, N_detect, mrad, err_lo, err_la, errr_, frac_dupes =\
+        counter[w], N_match[w], N_csv[w], N_detect[w], mrad[w], err_lo[w], err_la[w], err_r[w], frac_duplicates[w]
+
+    precision = N_match / (N_match + (N_detect - N_match))
+    recall = N_match / N_csv
     fscore = (1 + beta**2) * (recall * precision) / (precision * beta**2 + recall)
     diff = N_detect - N_match
     frac_new = diff / (N_detect + diff)
     frac_new2 = diff / (N_csv + diff)
     frac_duplicates = frac_dupes
-    
+
     return dict(precision=precision,
                 recall=recall,
                 fscore=fscore,
@@ -211,7 +211,7 @@ def diagnostic(res,beta):
                 counter=counter, N_match=N_match, N_csv=N_csv)
 
 
-def get_metrics(data, craters_images, dim, model, name,beta=1,offset=0,
+def get_metrics(data, craters_images, dim, model, name, beta=1, offset=0,
                 minrad=minrad_, maxrad=maxrad_,
                 longlat_thresh2=longlat_thresh2_,
                 rad_thresh=rad_thresh_, template_thresh=template_thresh_,
@@ -240,12 +240,12 @@ def get_metrics(data, craters_images, dim, model, name,beta=1,offset=0,
     diam = 'Diameter (pix)'
 
     for i in range(len(X)):
-        imname = images[i]#        name = "img_{0:05d}".format(i)
+        imname = images[i]  # name = "img_{0:05d}".format(i)
         found = False
         for crat in craters:
             if imname in crat:
                 csv = crat[imname]
-                found=True
+                found = True
         if not found:
             csvs.append([-2])
             continue
@@ -280,33 +280,33 @@ def get_metrics(data, craters_images, dim, model, name,beta=1,offset=0,
         print("Successfully generated and saved model predictions.")
     else:
         preds = model
-    #print(csvs)
-    countme = [i for i in range(n_csvs) if len(csvs[i])>=3]
+    # print(csvs)
+    countme = [i for i in range(n_csvs) if len(csvs[i]) >= 3]
     print("Processing {} fields".format(len(countme)))
 
-    #preds contains a large number of predictions, so we run the template code in parallel.
-    res = Parallel(n_jobs=24, verbose=5)(delayed(t2c)(preds[i], csvs[i],i, 
+    # preds contains a large number of predictions, so we run the template code in parallel.
+    res = Parallel(n_jobs=24, verbose=5)(delayed(t2c)(preds[i], csvs[i], i,
                                                       minrad=minrad, maxrad=maxrad, longlat_thresh2=longlat_thresh2,
-                                                      rad_thresh=rad_thresh, template_thresh=template_thresh, target_thresh=target_thresh) 
-                                         for i in range(n_csvs) if len(csvs[i])>=3)
+                                                      rad_thresh=rad_thresh, template_thresh=template_thresh, target_thresh=target_thresh)
+                                         for i in range(n_csvs) if len(csvs[i]) >= 3)
 
-    if len(res)==0:
+    if len(res) == 0:
         print("No valid results: ", res)
         return None
-    #At this point we've processed the predictions with the template matching algorithm, now calculate the metrics from the data.
-    diag = diagnostic(res,beta)
+    # At this point we've processed the predictions with the template matching algorithm, now calculate the metrics from the data.
+    diag = diagnostic(res, beta)
     print(len(diag["recall"]))
     #print("binary XE score = %f" % model.evaluate(X, Y))
     if len(diag["recall"]) > 3:
-        for fname,data in [("N_match/N_csv (recall)",diag["recall"]),
-                         ("N_match/(N_match + (N_detect-N_match)) (precision)",diag["precision"]),
+        for fname, data in [("N_match/N_csv (recall)", diag["recall"]),
+                         ("N_match/(N_match + (N_detect-N_match)) (precision)", diag["precision"]),
                          ("F_{} score".format(beta), diag["fscore"]),
                          ("(N_detect - N_match)/N_detect (fraction of craters that are new)", diag["frac_new"]),
                          ("(N_detect - N_match)/N_csv (fraction of craters that are new, 2)", diag["frac_new2"])]:
             print("mean and std of %s = %f, %f" %
-                  (fname,np.mean(data), np.std(data)))
-        for fname,data in [("fractional longitude diff",diag["err_lo"]),
-                          ("fractional latitude diff",diag["err_la"]),
+                  (fname, np.mean(data), np.std(data)))
+        for fname, data in [("fractional longitude diff", diag["err_lo"]),
+                          ("fractional latitude diff", diag["err_la"]),
                           ("fractional radius diff", diag["err_r"]),
                          ]:
             print("median and IQR %s = %f, 25:%f, 75:%f" %
@@ -425,7 +425,7 @@ def test_model(Data, Craters, MP, i_MP):
     drop = get_param_i(MP['dropout'], i_MP)
 
     model = load_model(MP["model"])
-    get_metrics(Data[MP["test_dataset"]], Craters[MP["test_dataset"]], dim, model,MP["test_dataset"])
+    get_metrics(Data[MP["test_dataset"]], Craters[MP["test_dataset"]], dim, model, MP["test_dataset"])
 
 
 def train_and_test_model(Data, Craters, MP, i_MP):
@@ -467,12 +467,12 @@ def train_and_test_model(Data, Craters, MP, i_MP):
             model.fit_generator(
                 custom_image_generator(Data['train'][0], Data['train'][1],
                                        batch_size=bs),
-                steps_per_epoch=n_samples/bs, epochs=1, verbose=1,
+                steps_per_epoch=n_samples / bs, epochs=1, verbose=1,
                 # validation_data=(Data['dev'][0],Data['dev'][1]), #no gen
                 validation_data=custom_image_generator(Data['dev'][0],
                                                        Data['dev'][1],
                                                        batch_size=bs),
-                validation_steps=MP['n_dev']/bs,
+                validation_steps=MP['n_dev'] / bs,
                 callbacks=[
                     EarlyStopping(monitor='val_loss', patience=3, verbose=0)])
         else:
@@ -487,16 +487,16 @@ def train_and_test_model(Data, Craters, MP, i_MP):
                 nb_val_samples=n_samples,
                 callbacks=[
                     EarlyStopping(monitor='val_loss', patience=3, verbose=0)])
-        model_save_name = os.path.join(MP["save_dir"],"model_{}_{}_{}_{}_{}_{}_{}.hdf5".format(learn_rate,n_filters,init,lmbda,drop,nb,nb_epoch))
-    
+        model_save_name = os.path.join(MP["save_dir"], "model_{}_{}_{}_{}_{}_{}_{}.hdf5".format(learn_rate, n_filters, init, lmbda, drop, nb, nb_epoch))
+
         if MP['save_models']:
             model.save(model_save_name)
         if MP["calculate_custom_loss"]:
-            get_metrics(Data['dev'], Craters['dev'], dim, model,"dev")
+            get_metrics(Data['dev'], Craters['dev'], dim, model, "dev")
 
 
     if MP["save_models"] == 1:
-        model.save(os.path.join(MP["save_dir"],MP["final_save_name"]))
+        model.save(os.path.join(MP["save_dir"], MP["final_save_name"]))
 
     print("###################################")
     print("##########END_OF_RUN_INFO##########")
@@ -505,7 +505,7 @@ def train_and_test_model(Data, Craters, MP, i_MP):
           dropout=%f""" % (learn_rate, bs, FL, nb_epoch, MP['n_train'],
                            MP['dim'], init, n_filters, lmbda, drop))
     if MP["calculate_custom_loss"]:
-        get_metrics(Data['test'], Craters['test'], dim, model,"test")
+        get_metrics(Data['test'], Craters['test'], dim, model, "test")
     print("###################################")
     print("###################################")
 
@@ -522,7 +522,7 @@ def get_models(MP):
     n_train, n_dev, n_test = MP['n_train'], MP['n_dev'], MP['n_test']
 
     # Load data
-    def load_files(numbers,test, this_dataset):
+    def load_files(numbers, test, this_dataset):
         res0 = []
         res1 = []
         files = []
@@ -531,39 +531,39 @@ def get_models(MP):
         npic = 0
         if not test or (test and this_dataset):
             for n in tqdm(numbers):
-                files.append(h5py.File(os.path.join(dir,"sys_images_{0:05d}.hdf5".format(n)),'r'))
-                images.extend( ["img_{0:05d}".format(a) for a in np.arange(n,n+1000)])
+                files.append(h5py.File(os.path.join(dir, "sys_images_{0:05d}.hdf5".format(n)), 'r'))
+                images.extend(["img_{0:05d}".format(a) for a in np.arange(n, n + 1000)])
                 res0.append(files[-1]["input_images"][:].astype('float32'))
                 npic = npic + len(res0[-1])
                 res1.append(files[-1]["target_masks"][:].astype('float32'))
                 files[-1].close()
-                craters.append(pd.HDFStore(os.path.join(dir,"sys_craters_{0:05d}.hdf5".format(n)),'r'))
+                craters.append(pd.HDFStore(os.path.join(dir, "sys_craters_{0:05d}.hdf5".format(n)), 'r'))
             res0 = np.vstack(res0)
             res1 = np.vstack(res1)
-        return files, res0, res1,npic,craters, images
+        return files, res0, res1, npic, craters, images
 
-    train_files, train0,train1, Ntrain,train_craters,train_images = load_files(MP["train_indices"], MP["test"],MP["test_dataset"]=="train")
-    print(Ntrain,n_train)
+    train_files, train0, train1, Ntrain, train_craters, train_images = load_files(MP["train_indices"], MP["test"], MP["test_dataset"] == "train")
+    print(Ntrain, n_train)
 
-    dev_files, dev0,dev1, Ndev,dev_craters,dev_images = load_files(MP["dev_indices"],MP["test"],MP["test_dataset"]=="dev")
-    print(Ndev,n_dev)
+    dev_files, dev0, dev1, Ndev, dev_craters, dev_images = load_files(MP["dev_indices"], MP["test"], MP["test_dataset"] == "dev")
+    print(Ndev, n_dev)
 
-    test_files, test0,test1, Ntest,test_craters,test_images = load_files(MP["test_indices"], MP["test"], MP["test_dataset"]=="test")
-    print(Ntest,n_test)
+    test_files, test0, test1, Ntest, test_craters, test_images = load_files(MP["test_indices"], MP["test"], MP["test_dataset"] == "test")
+    print(Ntest, n_test)
 
     Data = {
-        "train":[train0,train1],
-        "dev":[dev0,dev1],
-        "test":[test0[:n_test],test1[:n_test]]
+        "train": [train0, train1],
+        "dev": [dev0, dev1],
+        "test": [test0[:n_test], test1[:n_test]]
         }
 
     # Rescale, normalize, add extra dim
     proc.preprocess(Data)
 
     # Load ground-truth craters
-    Craters = { 
-        'train': [train_craters,train_images],
-        'dev': [dev_craters,dev_images],
+    Craters = {
+        'train': [train_craters, train_images],
+        'dev': [dev_craters, dev_images],
         'test': [test_craters, test_images]
     }
 
@@ -577,74 +577,74 @@ def get_models(MP):
 
 
 @dl.command()
-@click.option("--test",is_flag=True,default=False)
+@click.option("--test", is_flag=True, default=False)
 @click.option("--test_dataset", default="dev")
 @click.option("--model", default=None)
-def train_model(test,test_dataset,model):
+def train_model(test, test_dataset, model):
     """Run Convolutional Neural Network Training
     
     Execute the training of a (UNET) Convolutional Neural Network on
     images of the Moon and binary ring targets.
     """
-    
+
     # Model Parameters
     MP = {}
-    
+
     # Directory of train/dev/test image and crater hdf5 files.
-    MP['dir'] = os.path.join(os.getenv("DM_ROOTDIR"),'data/processed/')
-    
+    MP['dir'] = os.path.join(os.getenv("DM_ROOTDIR"), 'data/processed/')
+
     # Image width/height, assuming square images.
     MP['dim'] = 256
-    
+
     # Batch size: smaller values = less memory but less accurate gradient estimate
     MP['bs'] = 10
-    
+
     # Number of training epochs.
     MP['epochs'] = 30
-    
+
     # Number of train/valid/test samples, needs to be a multiple of batch size.
 
-    #sample every even numbered image file to use in the training, 
-    #half of the odd number for testing.
-    #half of the odd numbers for validataion.
-    MP['train_indices'] = list(np.arange(162000,208000,2000))
-    MP['dev_indices']   = list(np.arange(161000,206000,4000))
-    MP['test_indices']  = list(np.arange(163000,206000,4000))
+    # sample every even numbered image file to use in the training,
+    # half of the odd number for testing.
+    # half of the odd numbers for validataion.
+    MP['train_indices'] = list(np.arange(162000, 208000, 2000))
+    MP['dev_indices'] = list(np.arange(161000, 206000, 4000))
+    MP['test_indices'] = list(np.arange(163000, 206000, 4000))
     #    MP['test_indices']  = 90000#list(np.arange(10000,184000,8000))
-                                 
-    MP['n_train'] = len(MP["train_indices"])*1000
-    MP['n_dev'] = len(MP["dev_indices"])*1000
-    MP['n_test'] = len(MP["test_indices"])*1000
-    print(MP["n_train"],MP["n_dev"],MP["n_test"])
-    
+
+    MP['n_train'] = len(MP["train_indices"]) * 1000
+    MP['n_dev'] = len(MP["dev_indices"]) * 1000
+    MP['n_test'] = len(MP["test_indices"]) * 1000
+    print(MP["n_train"], MP["n_dev"], MP["n_test"])
+
     # Save model (binary flag) and directory.
     MP['save_models'] = 1
     MP["calculate_custom_loss"] = False
     MP['save_dir'] = 'models'
     MP['final_save_name'] = 'model.h5'
 
-    #initial model
-    MP["model"]=model
+    # initial model
+    MP["model"] = model
 
-    #testing only
+    # testing only
     MP["test"] = test
     MP["test_dataset"] = test_dataset
-    
+
     # Model Parameters (to potentially iterate over, keep in lists).
-    #runs.csv looks like
-    #filter_length,lr,n_filters,init,lambda,dropout
-    #3,0.0001,112,he_normal,1e-6,0.15
+    # runs.csv looks like
+    # filter_length,lr,n_filters,init,lambda,dropout
+    # 3,0.0001,112,he_normal,1e-6,0.15
     #
-    #each line is a new run.
+    # each line is a new run.
     df = pd.read_csv("runs.csv")
-    for na,ty in [("filter_length",int),
-                        ("lr",float),
-                        ("n_filters",int),
-                        ("init",str),
-                        ("lambda",float),
-                        ("dropout",float)]:
+    for na, ty in [("filter_length", int),
+                        ("lr", float),
+                        ("n_filters", int),
+                        ("init", str),
+                        ("lambda", float),
+                        ("dropout", float)]:
         MP[na] = df[na].astype(ty).values
-    
+
     MP['N_runs'] = len(MP['lambda'])                # Number of runs
     MP['filter_length'] = [3]       # Filter length
 #    MP['lr'] = [0.0001]             # Learning rate
@@ -652,7 +652,7 @@ def train_model(test,test_dataset,model):
 #    MP['init'] = ['he_normal']      # Weight initialization
 #    MP['lambda'] = [1e-6]           # Weight regularization
 #    MP['dropout'] = [0.15]          # Dropout fraction
-    
+
     # Iterating over parameters example.
     #    MP['N_runs'] = 2
     #    MP['lambda']=[1e-4,1e-4]
