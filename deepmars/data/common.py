@@ -304,7 +304,8 @@ def WarpCraterLoc(craters, geoproj, oproj, oextent, imgdim, llbd=None,
 
     return ctr_wrp
 
-############# Warp Plate Carree to Orthographic ###############
+#  ############ Warp Plate Carree to Orthographic ###############
+
 
 def PlateCarree_to_Orthographic(img, llbd, craters, iglobe=None,
                                 ctr_sub=False, arad=1737.4, origin="upper",

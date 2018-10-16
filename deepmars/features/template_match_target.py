@@ -15,7 +15,7 @@ longlat_thresh2, rad_thresh : floats
     CNN-detected rings to corresponding csvs (i.e. template_match_t2c),
     the same criteria is used to determine a match.
 template_thresh : float
-    0-1 range. If match_template probability > template_thresh, count as 
+    0-1 range. If match_template probability > template_thresh, count as
     detection.
 target_thresh : float
     0-1 range. target[target > target_thresh] = 1, otherwise 0
@@ -27,7 +27,7 @@ rad_thresh_ = 1.0
 template_thresh_ = 0.5
 target_thresh_ = 0.1
 
-#####################################
+
 def template_match_t(target, minrad=minrad_, maxrad=maxrad_,
                      longlat_thresh2=longlat_thresh2_, rad_thresh=rad_thresh_,
                      template_thresh=template_thresh_,
@@ -103,14 +103,14 @@ def template_match_t(target, minrad=minrad_, maxrad=maxrad_,
         dL = ((Long - lo)**2 + (Lat - la)**2) / minr**2
         dR = abs(Rad - r) / minr
         index = (dR < rad_thresh) & (dL < longlat_thresh2)
-        if len(np.where(index == True)[0]) > 1:
+        if len(np.where(index)[0]) > 1:
             # replace current coord with max match probability coord in
             # duplicate list
-            coords_i = coords[np.where(index == True)]
-            corr_i = corr[np.where(index == True)]
+            coords_i = coords[np.where(index)]
+            corr_i = corr[np.where(index)]
             coords[i] = coords_i[corr_i == np.max(corr_i)][0]
             index[i] = False
-            coords = coords[np.where(index == False)]
+            coords = coords[np.where(~index)]
         N, i = len(coords), i + 1
 
     return coords
@@ -118,7 +118,8 @@ def template_match_t(target, minrad=minrad_, maxrad=maxrad_,
 
 def template_match_t2c(target, csv_coords, minrad=minrad_, maxrad=maxrad_,
                        longlat_thresh2=longlat_thresh2_,
-                       rad_thresh=rad_thresh_, template_thresh=template_thresh_,
+                       rad_thresh=rad_thresh_,
+                       template_thresh=template_thresh_,
                        target_thresh=target_thresh_, rmv_oor_csvs=0):
     """Extracts crater coordinates (in pixels) from a CNN-predicted target and
     compares the resulting detections to the corresponding human-counted crater
@@ -173,15 +174,22 @@ def template_match_t2c(target, csv_coords, minrad=minrad_, maxrad=maxrad_,
     templ_coords = template_match_t(target, minrad, maxrad, longlat_thresh2,
                                     rad_thresh, template_thresh, target_thresh)
 
-    return template_match_c(templ_coords, target, csv_coords, minrad=minrad, maxrad=maxrad,
-                       longlat_thresh2=longlat_thresh2,
-                       rad_thresh=rad_thresh, template_thresh=template_thresh,
-                       target_thresh=target_thresh, rmv_oor_csvs=0)
+    return template_match_c(templ_coords, target, csv_coords,
+                            minrad=minrad, maxrad=maxrad,
+                            longlat_thresh2=longlat_thresh2,
+                            rad_thresh=rad_thresh,
+                            template_thresh=template_thresh,
+                            target_thresh=target_thresh,
+                            rmv_oor_csvs=0)
 
-def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=maxrad_,
-                       longlat_thresh2=longlat_thresh2_,
-                       rad_thresh=rad_thresh_, template_thresh=template_thresh_,
-                       target_thresh=target_thresh_, rmv_oor_csvs=0):
+
+def template_match_c(templ_coords, target, csv_coords,
+                     minrad=minrad_, maxrad=maxrad_,
+                     longlat_thresh2=longlat_thresh2_,
+                     rad_thresh=rad_thresh_,
+                     template_thresh=template_thresh_,
+                     target_thresh=target_thresh_,
+                     rmv_oor_csvs=0):
     # find max detected crater radius
     maxr = 0
     if len(templ_coords) > 0:
@@ -199,7 +207,7 @@ def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=ma
         dL = ((Long - lo)**2 + (Lat - la)**2) / minr**2
         dR = abs(Rad - r) / minr
         index = (dR < rad_thresh) & (dL < longlat_thresh2)
-        index_True = np.where(index == True)[0]
+        index_True = np.where(index)[0]
         N = len(index_True)
         if N >= 1:
             Lo, La, R = csv_coords[index_True[0]].T
@@ -211,7 +219,7 @@ def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=ma
                 frac_dupes += (N - 1) / float(len(templ_coords))
         N_match += min(1, N)
         # remove csv(s) so it can't be re-matched again
-        csv_coords = csv_coords[np.where(index == False)]
+        csv_coords = csv_coords[np.where(~index)]
         if len(csv_coords) == 0:
             break
 
@@ -228,4 +236,5 @@ def template_match_c(templ_coords, target, csv_coords, minrad=minrad_, maxrad=ma
         err_la = err_la / N_match
         err_r = err_r / N_match
 
-    return templ_coords, N_match, N_csv, N_detect, maxr, err_lo, err_la, err_r, frac_dupes
+    return templ_coords, N_match, N_csv, N_detect, maxr,\
+        err_lo, err_la, err_r, frac_dupes

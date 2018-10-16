@@ -118,7 +118,8 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     if not sample:
         AddPlateCarree_XY(craters, img.shape, cdim=cdim, origin=origin)
 
-    iglobe = ccrs.Globe(semimajor_axis=arad * 1000., semiminor_axis=arad * 1000.,
+    iglobe = ccrs.Globe(semimajor_axis=arad * 1000.,
+                        semiminor_axis=arad * 1000.,
                         ellipse=None)
 
     # Create random sampler (either uniform or loguniform).
@@ -300,23 +301,26 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
                 arad=arad, origin=origin, rgcoeff=1.2, slivercut=0.2))
 
         if imgo_arr is None:
-            logger.warning("Discarding narrow image: {} {} {} {}".format(*llbd))
+            logger.warning(
+                "Discarding narrow image: {} {} {} {}".format(*llbd))
             continue
 #        imgo_arr = np.asanyarray(imgo)
-        #print(imgo_arr, imgo_arr.sum())
-        assert np.asanyarray(imgo_arr).sum() > 0, ("Sum of imgo is zero!  There likely was "
-                                    "an error in projecting the cropped "
-                                    "image.")
+        # print(imgo_arr, imgo_arr.sum())
+        assert np.asanyarray(imgo_arr).sum() > 0,
+        ("Sum of imgo is zero!  There likely was "
+         "an error in projecting the cropped "
+         "image.")
 
         # Make target mask.  Used Image.BILINEAR resampling because
         # Image.NEAREST creates artifacts.  Try Image.LANZCOS if BILINEAR still
         # leaves artifacts).
 #        tgt = resize(imgo_arr,(tglen, tglen))
-        tgt = np.asanyarray(imgo_arr.resize((tglen, tglen), resample=Image.BILINEAR))
+        tgt = np.asanyarray(imgo_arr.resize(
+            (tglen, tglen), resample=Image.BILINEAR))
 
         import deepmars.data.mask as dm
         mask = dm.make_mask(ctr_xy, tgt, binary=binary, rings=rings,
-                         ringwidth=ringwidth, truncate=truncate)
+                            ringwidth=ringwidth, truncate=truncate)
 
         # Output everything to file.
         imgs_h5_inputs[i, ...] = imgo_arr
@@ -349,10 +353,14 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
 @click.option("--sample", is_flag=True, default=False)
 @click.option("--systematic", is_flag=True, default=False)
 @click.option("--prefix", default="test")
-@click.option("--source_cdim", default=(-180., 180., -90., 90.), nargs=4, type=float)
-@click.option("--sub_cdim", default=(-180., 180., -90., 90.), nargs=4, type=float)
+@click.option("--source_cdim", default=(-180., 180., -90., 90.),
+              nargs=4, type=float)
+@click.option("--sub_cdim", default=(-180., 180., -90., 90.),
+              nargs=4, type=float)
 @click.option("--rawlen_range", default=(256, 8192), nargs=2, type=int)
-def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim, sub_cdim, rawlen_range):  # input_filepath, output_filepath):
+# input_filepath, output_filepath):
+def make_dataset(filename, istart, amt, sample, systematic, prefix,
+                 source_cdim, sub_cdim, rawlen_range):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
@@ -363,23 +371,24 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim,
     # Use MPI4py?  Set this to False if it's not supposed by the system.
     use_mpi4py = False
 
-        # Output filepath and file header.  Eg. if outhead = "./input_data/train",
+    # Output filepath and file header.  Eg. if outhead = "./input_data/train",
     # files will have extension "./out/train_inputs.hdf5" and
     # "./out/train_targets.hdf5"
-    outhead = os.path.join(os.getenv("DM_ROOTDIR"), "data/processed/{}".format(prefix))
+    outhead = os.path.join(os.getenv("DM_ROOTDIR"),
+                           "data/processed/{}".format(prefix))
 
     # Number of images to make (if using MPI4py, number of image per thread to
     # make).
-#    amt = 3000
+    # amt = 3000
 
+    # Range of image widths, in pixels, to crop from source image
+    # (input images will be scaled down to ilen). For Orthogonal
+    # projection, larger images are distorted at their edges, so
+    # there is some trade-off between ensuring images have minimal
+    # distortion, and including the largest craters in the image.
 
-    # Range of image widths, in pixels, to crop from source image (input images
-    # will be scaled down to ilen). For Orthogonal projection, larger images are
-    # distorted at their edges, so there is some trade-off between ensuring images
-    # have minimal distortion, and including the largest craters in the image.
-
-    # Distribution to sample from rawlen_range - "uniform" for uniform, and "log"
-    # for loguniform.
+    # Distribution to sample from rawlen_range - "uniform" for uniform,
+    # and "log" for loguniform.
     rawlen_dist = 'log'
 
     # Size of input images.
@@ -392,8 +401,10 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim,
 #    if source_cdim is None:
 #        source_cdim =
 
-    # [Min long, max long, min lat, max lat] dimensions of the region of the source
-    # to use when randomly cropping.  Used to distinguish training from test sets.
+    # [Min long, max long, min lat, max lat]
+    # dimensions of the region of the source
+    # to use when randomly cropping.  Used to distinguish training
+    # from test sets.
 #    if sub_cdim is None:
 #        sub_cdim = [-180., 180., -90., 90.]
 
@@ -403,7 +414,7 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim,
     # Radius of the world in km (1737.4 for Moon).
     R_km = 3389.0
 
-    ### Target mask arguments. ###
+    # Target mask arguments. #
 
     # If True, truncate mask where image has padding.
     truncate = True
@@ -451,8 +462,13 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim,
         sub_cdim = np.array([-180 + dx * (rank % xv) - overlap * dx,
                              -180 + dx * (1 + rank % xv) + overlap * dy,
                              -90 + dy * (rank // xv) - overlap * dx,
-                             -90 + dy * (1 + rank // xv) + overlap * dy]).astype(int)
-        sub_cdim = list(np.hstack([np.clip(sub_cdim[:2], -180, 180), np.clip(sub_cdim[2:], -90, 90)]).astype(int))
+                             -90 + dy * (1 + rank // xv) + overlap * dy])
+
+        sub_cdim = sub_cdim.astype(int)
+
+        sub_cdim = list(np.hstack(
+            [np.clip(sub_cdim[:2], -180, 180),
+             np.clip(sub_cdim[2:], -90, 90)]).astype(int))
 
         print(",".join([str(x) for x in np.hstack([xv, yv, rk, sub_cdim])]))
     else:
@@ -462,20 +478,24 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix, source_cdim,
     # craters beyond cdim (either sub or source).
     if sub_cdim != source_cdim:
         img = InitialImageCut(img, source_cdim, sub_cdim)
-        logger.info("Subsampled DEM resolution {} by {}".format(img.shape[0], img.shape[1]))
-        logger.info("Covering Long {} to {}, lat {} to {}".format(sub_cdim[0], sub_cdim[1], sub_cdim[2], sub_cdim[3]))
+        logger.info("Subsampled DEM resolution {} by {}".format(
+            img.shape[0], img.shape[1]))
+        logger.info("Covering Long {} to {}, lat {} to {}".format(
+            sub_cdim[0], sub_cdim[1], sub_cdim[2], sub_cdim[3]))
 
     # This always works, since sub_cdim < source_cdim.
     if not sample:
         craters = ResampleCraters(craters, sub_cdim, None, arad=R_km)
     GenDataset(img, craters, outhead, rawlen_range=rawlen_range,
-                    rawlen_dist=rawlen_dist, ilen=ilen, cdim=sub_cdim,
-                    arad=R_km, minpix=minpix, tglen=tglen, binary=True,
-                    rings=True, ringwidth=ringwidth, truncate=truncate,
-                    amt=amt, istart=istart, verbose=verbose, sample=sample, systematic=systematic)
+               rawlen_dist=rawlen_dist, ilen=ilen, cdim=sub_cdim,
+               arad=R_km, minpix=minpix, tglen=tglen, binary=True,
+               rings=True, ringwidth=ringwidth, truncate=truncate,
+               amt=amt, istart=istart, verbose=verbose, sample=sample,
+               systematic=systematic)
 
     elapsed_time = time.time() - start_time
     logger.info("Time elapsed: {0:.1f} min".format(elapsed_time / 60.))
+
 
 if __name__ == '__main__':
     data()

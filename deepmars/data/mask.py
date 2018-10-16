@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 
+
 def ringmaker(r=10., dr=1):
     """
     Creates ring of radius r and thickness dr.

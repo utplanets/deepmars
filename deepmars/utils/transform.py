@@ -4,7 +4,6 @@ Functions for coordinate transforms, used by input_data_gen.py functions.
 """
 import numpy as np
 
-########## Coordinates to pixels projections ##########
 
 def coord2pix(cx, cy, cdim, imgdim, origin="upper"):
     """Converts coordinate x/y to image pixel locations.
@@ -78,7 +77,6 @@ def pix2coord(x, y, cdim, imgdim, origin="upper"):
 
     return cx, cy
 
-########## Metres to pixels conversion ##########
 
 def km2pix(imgheight, latextent, dc=1., a=3389.0):
     """Returns conversion from km to pixels (i.e. pix / km).

@@ -17,7 +17,6 @@ from keras.regularizers import l2
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
 from keras import backend as K
-K.set_image_dim_ordering('tf')
 
 import deepmars.features.template_match_target as tmt
 import deepmars.utils.processing as proc
@@ -32,6 +31,8 @@ from tqdm import tqdm, trange
 
 # Check Keras version - code will switch API if needed.
 from keras import __version__ as keras_version
+K.set_image_dim_ordering('tf')
+
 k2 = True if keras_version[0] == '2' else False
 
 # If Keras is v2.x.x, create Keras 1-syntax wrappers.
@@ -66,6 +67,7 @@ rad_thresh_ = 1.0
 template_thresh_ = 0.5
 target_thresh_ = 0.1
 
+
 @click.group()
 def dl():
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -73,7 +75,6 @@ def dl():
 
     # not used in this stub but often useful for finding various files
     project_dir = Path(__file__).resolve().parents[2]
-
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables
@@ -104,6 +105,8 @@ def get_param_i(param, i):
         return param[0]
 
 ########################
+
+
 def custom_image_generator(data, target, batch_size=32):
     """Custom image generator that manipulates image/target pairs to prevent
     overfitting in the Convolutional Neural Network.
@@ -120,14 +123,13 @@ def custom_image_generator(data, target, batch_size=32):
     Yields
     ------
     Manipulated images and targets.
-        
     """
     D, L, W = data.shape[0], data[0].shape[0], data[0].shape[1]
     while True:
         shuffle_index = np.arange(D)
-        np.random.shuffle(shuffle_index)  # only shuffle once each loop through the data
+        # only shuffle once each loop through the data
+        np.random.shuffle(shuffle_index)
         for i in np.arange(0, len(data), batch_size):
-#            print("a",i,batch_size, len(data))
             index = shuffle_index[i:i + batch_size]
             d, t = data[index].copy(), target[index].copy()
 
@@ -137,43 +139,56 @@ def custom_image_generator(data, target, batch_size=32):
 
             # Horizontal/vertical flips
             for j in np.where(np.random.randint(0, 2, batch_size) == 1)[0]:
-#                print(d.shape, t.shape, batch_size)
                 d[j], t[j] = np.fliplr(d[j]), np.fliplr(t[j])      # left/right
             for j in np.where(np.random.randint(0, 2, batch_size) == 1)[0]:
-#                print(d.shape, t.shape, batch_size)
                 d[j], t[j] = np.flipud(d[j]), np.flipud(t[j])      # up/down
 
             # Random up/down & left/right pixel shifts, 90 degree rotations
             npix = 15
-            h = np.random.randint(-npix, npix + 1, batch_size)    # Horizontal shift
-            v = np.random.randint(-npix, npix + 1, batch_size)    # Vertical shift
-            r = np.random.randint(0, 4, batch_size)               # 90 degree rotations
+            # Horizontal shift
+            h = np.random.randint(-npix, npix + 1, batch_size)
+            # Vertical shift
+            v = np.random.randint(-npix, npix + 1, batch_size)
+            # 90 degree rotations
+            r = np.random.randint(0, 4, batch_size)
             for j in range(batch_size):
                 d[j] = np.pad(d[j], ((npix, npix), (npix, npix), (0, 0)),
                               mode='constant')[npix + h[j]:L + h[j] + npix,
                                                npix + v[j]:W + v[j] + npix, :]
-                t[j] = np.pad(t[j], (npix,), mode='constant')[npix + h[j]:L + h[j] + npix,
-                                                              npix + v[j]:W + v[j] + npix]
+                sh, sv = slice(npix + h[j], L + h[j] + npix),\
+                    slice(npix + v[j], W + v[j] + npix)
+                t[j] = np.pad(t[j], (npix,), mode='constant')[sh, sv]
                 d[j], t[j] = np.rot90(d[j], r[j]), np.rot90(t[j], r[j])
             yield (d, t)
 
+
 def t2c(pred, csv, i,
-        minrad=minrad_, maxrad=maxrad_, longlat_thresh2=longlat_thresh2_,
-        rad_thresh=rad_thresh_, template_thresh=template_thresh_, target_thresh=target_thresh_):
-#    print(minrad, maxrad, longlat_thresh2, rad_thresh, template_thresh, target_thresh)
-    return np.hstack([i, tmt.template_match_t2c(pred, csv,
-                                               minrad=minrad, maxrad=maxrad, longlat_thresh2=longlat_thresh2,
-                                               rad_thresh=rad_thresh, template_thresh=template_thresh, target_thresh=target_thresh)])
+        minrad=minrad_,
+        maxrad=maxrad_,
+        longlat_thresh2=longlat_thresh2_,
+        rad_thresh=rad_thresh_,
+        template_thresh=template_thresh_,
+        target_thresh=target_thresh_):
+    return np.hstack([i,
+                      tmt.template_match_t2c(pred, csv,
+                                             minrad=minrad,
+                                             maxrad=maxrad
+                                             longlat_thresh2=longlat_thresh2,
+                                             rad_thresh=rad_thresh,
+                                             template_thresh=template_thresh,
+                                             target_thresh=target_thresh)])
+
 
 def diagnostic(res, beta):
     """Calculate the metrics from the predictions compared to the CSV.
-    
+
     Parameters
     ------------
     res: list of results containing:
-        image number, number of matched, number of existing craters, number of detected craters,
-        maximum radius detected, mean error in longitude, mean error in latitude, mean error in radius,
-        fraction of duplicates in detections.
+        image number, number of matched, number of existing craters, number of
+        detected craters, maximum radius detected, mean error in longitude,
+        mean error in latitude, mean error in radius, fraction of duplicates
+        in detections.
     beta : int
         Beta value when calculating F-beta score.
 
@@ -182,17 +197,21 @@ def diagnostic(res, beta):
     dictionary : metrics stored in a dictionary
     """
 
-    counter, N_match, N_csv, N_detect, mrad, err_lo, err_la, err_r, frac_duplicates = np.array(res).T
+    counter, N_match, N_csv, N_detect,\
+        mrad, err_lo, err_la, err_r, frac_duplicates = np.array(res).T
 
     w = np.where(N_match == 0)
 
     w = np.where(N_match > 0)
-    counter, N_match, N_csv, N_detect, mrad, err_lo, err_la, errr_, frac_dupes =\
-        counter[w], N_match[w], N_csv[w], N_detect[w], mrad[w], err_lo[w], err_la[w], err_r[w], frac_duplicates[w]
+    counter, N_match, N_csv, N_detect,\
+        mrad, err_lo, err_la, errr_, frac_dupes =\
+        counter[w], N_match[w], N_csv[w], N_detect[w],\
+        mrad[w], err_lo[w], err_la[w], err_r[w], frac_duplicates[w]
 
     precision = N_match / (N_match + (N_detect - N_match))
     recall = N_match / N_csv
-    fscore = (1 + beta**2) * (recall * precision) / (precision * beta**2 + recall)
+    fscore = (1 + beta**2) * (recall * precision) / \
+             (precision * beta**2 + recall)
     diff = N_detect - N_match
     frac_new = diff / (N_detect + diff)
     frac_new2 = diff / (N_csv + diff)
@@ -216,14 +235,14 @@ def get_metrics(data, craters_images, dim, model, name, beta=1, offset=0,
                 longlat_thresh2=longlat_thresh2_,
                 rad_thresh=rad_thresh_, template_thresh=template_thresh_,
                 target_thresh=target_thresh_, rmv_oor_csvs=0):
-    """Function that prints pertinent metrics at the end of each epoch. 
+    """Function that prints pertinent metrics at the end of each epoch.
 
     Parameters
     ----------
     data : hdf5
         Input images.
     craters : hdf5
-        Pandas arrays of human-counted crater data. 
+        Pandas arrays of human-counted crater data.
     dim : int
         Dimension of input images (assumes square).
     model : keras model object
@@ -284,33 +303,49 @@ def get_metrics(data, craters_images, dim, model, name, beta=1, offset=0,
     countme = [i for i in range(n_csvs) if len(csvs[i]) >= 3]
     print("Processing {} fields".format(len(countme)))
 
-    # preds contains a large number of predictions, so we run the template code in parallel.
-    res = Parallel(n_jobs=24, verbose=5)(delayed(t2c)(preds[i], csvs[i], i,
-                                                      minrad=minrad, maxrad=maxrad, longlat_thresh2=longlat_thresh2,
-                                                      rad_thresh=rad_thresh, template_thresh=template_thresh, target_thresh=target_thresh)
-                                         for i in range(n_csvs) if len(csvs[i]) >= 3)
+    # preds contains a large number of predictions,
+    # so we run the template code in parallel.
+    res = Parallel(n_jobs=24,
+                   verbose=5)(delayed(t2c)(preds[i], csvs[i], i,
+                                           minrad=minrad,
+                                           maxrad=maxrad,
+                                           longlat_thresh2=longlat_thresh2,
+                                           rad_thresh=rad_thresh,
+                                           template_thresh=template_thresh,
+                                           target_thresh=target_thresh)
+                              for i in range(n_csvs) if len(csvs[i]) >= 3)
 
     if len(res) == 0:
         print("No valid results: ", res)
         return None
-    # At this point we've processed the predictions with the template matching algorithm, now calculate the metrics from the data.
+    # At this point we've processed the predictions with the template matching
+    # algorithm, now calculate the metrics from the data.
     diag = diagnostic(res, beta)
     print(len(diag["recall"]))
-    #print("binary XE score = %f" % model.evaluate(X, Y))
+    # print("binary XE score = %f" % model.evaluate(X, Y))
     if len(diag["recall"]) > 3:
-        for fname, data in [("N_match/N_csv (recall)", diag["recall"]),
-                         ("N_match/(N_match + (N_detect-N_match)) (precision)", diag["precision"]),
-                         ("F_{} score".format(beta), diag["fscore"]),
-                         ("(N_detect - N_match)/N_detect (fraction of craters that are new)", diag["frac_new"]),
-                         ("(N_detect - N_match)/N_csv (fraction of craters that are new, 2)", diag["frac_new2"])]:
+        metric_data = [("N_match/N_csv (recall)", diag["recall"]),
+                       ("N_match/(N_match + (N_detect-N_match)) (precision)",
+                       diag["precision"]),
+                       ("F_{} score".format(beta), diag["fscore"]),
+                       ("(N_detect - N_match)/N_detect" +
+                        "(fraction of craters that are new)",
+                       diag["frac_new"]),
+                       ("(N_detect - N_match)/N_csv (fraction" +
+                        "of craters that are new, 2)", diag["frac_new2"])]
+
+        for fname, data in metric_data:
             print("mean and std of %s = %f, %f" %
                   (fname, np.mean(data), np.std(data)))
         for fname, data in [("fractional longitude diff", diag["err_lo"]),
-                          ("fractional latitude diff", diag["err_la"]),
-                          ("fractional radius diff", diag["err_r"]),
-                         ]:
+                            ("fractional latitude diff", diag["err_la"]),
+                            ("fractional radius diff", diag["err_r"]),
+                            ]:
             print("median and IQR %s = %f, 25:%f, 75:%f" %
-             (fname, np.median(data), np.percentile(data, 25), np.percentile(data, 75)))
+                  (fname,
+                   np.median(data),
+                   np.percentile(data, 25),
+                   np.percentile(data, 75)))
 
         print("""mean and std of maximum detected pixel radius in an image =
              %f, %f""" % (np.mean(diag["maxrad"]), np.std(diag["maxrad"])))
@@ -320,8 +355,10 @@ def get_metrics(data, craters_images, dim, model, name, beta=1, offset=0,
         return diag
 
 ########################
+
+
 def build_model(dim, learn_rate, lmbda, drop, FL, init, n_filters):
-    """Function that builds the (UNET) convolutional neural network. 
+    """Function that builds the (UNET) convolutional neural network.
 
     Parameters
     ----------
@@ -330,7 +367,7 @@ def build_model(dim, learn_rate, lmbda, drop, FL, init, n_filters):
     learn_rate : float
         Learning rate.
     lmbda : float
-        Convolution2D regularization parameter. 
+        Convolution2D regularization parameter.
     drop : float
         Dropout fraction.
     FL : int
@@ -412,8 +449,10 @@ def build_model(dim, learn_rate, lmbda, drop, FL, init, n_filters):
     return model
 
 ########################
+
+
 def test_model(Data, Craters, MP, i_MP):
-# Static params
+    # Static params
     dim, nb_epoch, bs = MP['dim'], MP['epochs'], MP['bs']
 
     # Iterating params
@@ -425,12 +464,13 @@ def test_model(Data, Craters, MP, i_MP):
     drop = get_param_i(MP['dropout'], i_MP)
 
     model = load_model(MP["model"])
-    get_metrics(Data[MP["test_dataset"]], Craters[MP["test_dataset"]], dim, model, MP["test_dataset"])
+    get_metrics(Data[MP["test_dataset"]],
+                Craters[MP["test_dataset"]], dim, model, MP["test_dataset"])
 
 
 def train_and_test_model(Data, Craters, MP, i_MP):
     """Function that trains, tests and saves the model, printing out metrics
-    after each model. 
+    after each model.
 
     Parameters
     ----------
@@ -487,13 +527,22 @@ def train_and_test_model(Data, Craters, MP, i_MP):
                 nb_val_samples=n_samples,
                 callbacks=[
                     EarlyStopping(monitor='val_loss', patience=3, verbose=0)])
-        model_save_name = os.path.join(MP["save_dir"], "model_{}_{}_{}_{}_{}_{}_{}.hdf5".format(learn_rate, n_filters, init, lmbda, drop, nb, nb_epoch))
+
+        suffix = "{}_{}_{}_{}_{}_{}_{}.hdf5".format(learn_rate,
+                                                    n_filters,
+                                                    init,
+                                                    lmbda,
+                                                    drop,
+                                                    nb,
+                                                    nb_epoch)
+
+        model_save_name = os.path.join(MP["save_dir"],
+                                       "model_".format(suffix))
 
         if MP['save_models']:
             model.save(model_save_name)
         if MP["calculate_custom_loss"]:
             get_metrics(Data['dev'], Craters['dev'], dim, model, "dev")
-
 
     if MP["save_models"] == 1:
         model.save(os.path.join(MP["save_dir"], MP["final_save_name"]))
@@ -510,6 +559,8 @@ def train_and_test_model(Data, Craters, MP, i_MP):
     print("###################################")
 
 ########################
+
+
 def get_models(MP):
     """Top-level function that loads data files and calls train_and_test_model.
 
@@ -531,24 +582,48 @@ def get_models(MP):
         npic = 0
         if not test or (test and this_dataset):
             for n in tqdm(numbers):
-                files.append(h5py.File(os.path.join(dir, "sys_images_{0:05d}.hdf5".format(n)), 'r'))
-                images.extend(["img_{0:05d}".format(a) for a in np.arange(n, n + 1000)])
+                files.append(h5py.File(os.path.join(
+                    dir, "sys_images_{0:05d}.hdf5".format(n)), 'r'))
+                images.extend(["img_{0:05d}".format(a)
+                              for a in np.arange(n, n + 1000)])
                 res0.append(files[-1]["input_images"][:].astype('float32'))
                 npic = npic + len(res0[-1])
                 res1.append(files[-1]["target_masks"][:].astype('float32'))
                 files[-1].close()
-                craters.append(pd.HDFStore(os.path.join(dir, "sys_craters_{0:05d}.hdf5".format(n)), 'r'))
+                craters.append(pd.HDFStore(os.path.join(
+                    dir, "sys_craters_{0:05d}.hdf5".format(n)), 'r'))
             res0 = np.vstack(res0)
             res1 = np.vstack(res1)
         return files, res0, res1, npic, craters, images
 
-    train_files, train0, train1, Ntrain, train_craters, train_images = load_files(MP["train_indices"], MP["test"], MP["test_dataset"] == "train")
+    train_files,\
+        train0,\
+        train1,\
+        Ntrain,\
+        train_craters,\
+        train_images = load_files(MP["train_indices"],
+                                  MP["test"],
+                                  MP["test_dataset"] == "train")
     print(Ntrain, n_train)
 
-    dev_files, dev0, dev1, Ndev, dev_craters, dev_images = load_files(MP["dev_indices"], MP["test"], MP["test_dataset"] == "dev")
+    dev_files,\
+        dev0,\
+        dev1,\
+        Ndev,\
+        dev_craters,\
+        dev_images = load_files(MP["dev_indices"],
+                                MP["test"],
+                                MP["test_dataset"] == "dev")
     print(Ndev, n_dev)
 
-    test_files, test0, test1, Ntest, test_craters, test_images = load_files(MP["test_indices"], MP["test"], MP["test_dataset"] == "test")
+    test_files,\
+        test0,\
+        test1,\
+        Ntest,\
+        test_craters,\
+        test_images = load_files(MP["test_indices"],
+                                 MP["test"],
+                                 MP["test_dataset"] == "test")
     print(Ntest, n_test)
 
     Data = {
@@ -582,7 +657,7 @@ def get_models(MP):
 @click.option("--model", default=None)
 def train_model(test, test_dataset, model):
     """Run Convolutional Neural Network Training
-    
+
     Execute the training of a (UNET) Convolutional Neural Network on
     images of the Moon and binary ring targets.
     """
@@ -596,7 +671,7 @@ def train_model(test, test_dataset, model):
     # Image width/height, assuming square images.
     MP['dim'] = 256
 
-    # Batch size: smaller values = less memory but less accurate gradient estimate
+    # Batch size: smaller values = less memory, less accurate gradient estimate
     MP['bs'] = 10
 
     # Number of training epochs.
@@ -638,11 +713,11 @@ def train_model(test, test_dataset, model):
     # each line is a new run.
     df = pd.read_csv("runs.csv")
     for na, ty in [("filter_length", int),
-                        ("lr", float),
-                        ("n_filters", int),
-                        ("init", str),
-                        ("lambda", float),
-                        ("dropout", float)]:
+                   ("lr", float),
+                   ("n_filters", int),
+                   ("init", str),
+                   ("lambda", float),
+                   ("dropout", float)]:
         MP[na] = df[na].astype(ty).values
 
     MP['N_runs'] = len(MP['lambda'])                # Number of runs
