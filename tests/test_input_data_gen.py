@@ -9,9 +9,11 @@ import cartopy.crs as ccrs
 import cartopy.img_transform as cimg
 from PIL import Image
 sys.path.append('../')
-#import input_data_gen as igen
-#import utils.transform as trf
 from deepmars.data.common import ReadRobbinsCraters
+
+# import input_data_gen as igen
+# import utils.transform as trf
+
 
 class TestCatalogue(object):
     """Tests crater catalogues."""
@@ -21,10 +23,9 @@ class TestCatalogue(object):
         robbins = pd.read_csv('../data/raw/RobbinsCraters_20121016.tsv',
                               header=0, sep='\t', engine='python')
 
-
         keep_columns = ["LATITUDE_CIRCLE_IMAGE",
-                    "LONGITUDE_CIRCLE_IMAGE",
-                    "DIAM_CIRCLE_IMAGE"]
+                        "LONGITUDE_CIRCLE_IMAGE",
+                        "DIAM_CIRCLE_IMAGE"]
 
         robbins = robbins[keep_columns]
         robbins.columns = ["Lat", "Long", "Diameter (km)"]
@@ -38,5 +39,5 @@ class TestCatalogue(object):
 
         robbins.reset_index(inplace=True, drop=True)
         assert not np.all(robbins.values == self.robbins_t.values)
-        assert np.all(robbins.sort_values("Lat").values == self.robbins_t.values)
-        #assert not np.all(lrochead == lrochead_nosort)
+        assert np.all(robbins.sort_values("Lat").values ==
+                      self.robbins_t.values)
