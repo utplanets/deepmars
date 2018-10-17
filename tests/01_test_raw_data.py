@@ -1,12 +1,11 @@
-import unittest
 import os
 import dotenv
 import tifffile
 import pandas as pd
 
 
-class TestRawData(unittest.TestCase):
-    def setUp(self):
+class TestRawData(object):
+    def setup(self):
         project_dir = os.path.join(os.getcwd(), os.pardir)
         dotenv_path = os.path.join(project_dir, '.env')
         found = dotenv.load_dotenv(dotenv_path)
@@ -22,7 +21,3 @@ class TestRawData(unittest.TestCase):
         df = pd.read_table(os.getenv("DM_CraterTable"),
                            sep='\t',
                            engine='python')
-       
-
-if __name__ == '__main__':
-    unittest.main()
