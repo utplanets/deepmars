@@ -56,8 +56,13 @@ def ReadRobbinsCraters(filename=None):
     if filename is None:
         filename = os.getenv("DM_CraterTable")
         print(filename)
-#    craters = pd.read_table(filename,sep='\t',engine='python',index_col=False)
-    craters = pd.read_csv(filename, index_col=False)
+
+    try:
+        craters = pd.read_table(filename, sep='\t',
+                                engine='python', index_col=False)
+    except Exception as e:
+        craters = pd.read_csv(filename, index_col=False)
+
     keep_columns = ["LATITUDE_CIRCLE_IMAGE",
                     "LONGITUDE_CIRCLE_IMAGE",
                     "DIAM_CIRCLE_IMAGE"]

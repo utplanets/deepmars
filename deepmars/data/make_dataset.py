@@ -306,10 +306,10 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
             continue
 #        imgo_arr = np.asanyarray(imgo)
         # print(imgo_arr, imgo_arr.sum())
-        assert np.asanyarray(imgo_arr).sum() > 0,
-        ("Sum of imgo is zero!  There likely was "
-         "an error in projecting the cropped "
-         "image.")
+        assert np.asanyarray(imgo_arr).sum() > 0,\
+            ("Sum of imgo is zero!  There likely was "
+             "an error in projecting the cropped "
+             "image.")
 
         # Make target mask.  Used Image.BILINEAR resampling because
         # Image.NEAREST creates artifacts.  Try Image.LANZCOS if BILINEAR still
