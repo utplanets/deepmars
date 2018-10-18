@@ -222,7 +222,7 @@ def extract_unique_craters(CP, craters_unique, index=0,
         img = proc.get_id(i + index)
         # convert, add to master dist
         if len(coords) > 0:
-            new_craters_unique = estimate_longlatdiamkm(
+            new_craters_unique = trf.estimate_longlatdiamkm(
                 dim, P[llbd][img], P[distcoeff][img][0], coords)
             N_matches_tot += len(coords)
 

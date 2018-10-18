@@ -19,7 +19,7 @@ from PIL import Image
 import imageio
 import collections
 from deepmars.data.common import *
-
+import deepmars.data.mask as dm
 
 @click.group()
 def data():
@@ -137,12 +137,12 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
     # Initialize output hdf5s.
     imgs_h5 = h5py.File(outhead + '_images_{:05d}.hdf5'.format(istart), 'w')
     imgs_h5_inputs = imgs_h5.create_dataset("input_images", (amt, ilen, ilen),
-                                            dtype='uint8', compression="gzip",
-                                            compression_opts=9)
+                                            dtype='uint8')#, compression="gzip",
+                                            #compression_opts=9)
     imgs_h5_inputs.attrs['definition'] = "Input image dataset."
     imgs_h5_tgts = imgs_h5.create_dataset("target_masks", (amt, tglen, tglen),
-                                          dtype='float32', compression="gzip",
-                                          compression_opts=9)
+                                          dtype='float32')#, compression="gzip",
+#                                          compression_opts=9)
     imgs_h5_tgts.attrs['definition'] = "Target mask dataset."
     imgs_h5_llbd = imgs_h5.create_group("longlat_bounds")
     imgs_h5_llbd.attrs['definition'] = ("(long min, long max, lat min, "
@@ -318,7 +318,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
         tgt = np.asanyarray(imgo_arr.resize(
             (tglen, tglen), resample=Image.BILINEAR))
 
-        import deepmars.data.mask as dm
+
         mask = dm.make_mask(ctr_xy, tgt, binary=binary, rings=rings,
                             ringwidth=ringwidth, truncate=truncate)
 
@@ -357,7 +357,7 @@ def GenDataset(img, craters, outhead, rawlen_range=[512, 1024],
               nargs=4, type=float)
 @click.option("--sub_cdim", default=(-180., 180., -90., 90.),
               nargs=4, type=float)
-@click.option("--rawlen_range", default=(256, 8192), nargs=2, type=int)
+@click.option("--rawlen_range", default=(512, 16384), nargs=2, type=int)
 # input_filepath, output_filepath):
 def make_dataset(filename, istart, amt, sample, systematic, prefix,
                  source_cdim, sub_cdim, rawlen_range):
@@ -486,6 +486,7 @@ def make_dataset(filename, istart, amt, sample, systematic, prefix,
     # This always works, since sub_cdim < source_cdim.
     if not sample:
         craters = ResampleCraters(craters, sub_cdim, None, arad=R_km)
+
     GenDataset(img, craters, outhead, rawlen_range=rawlen_range,
                rawlen_dist=rawlen_dist, ilen=ilen, cdim=sub_cdim,
                arad=R_km, minpix=minpix, tglen=tglen, binary=True,
